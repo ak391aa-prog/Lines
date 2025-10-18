@@ -1,0 +1,5 @@
+{
+  "name": "Lines - Modern Video Platform",
+  "description": "A sleek, modern, and fully functional video streaming platform named Lines, built with React and Tailwind CSS. It features a unique, dark-themed UI, a dynamic video grid, a detailed video playback page with recommendations and comments, and a collapsible navigation sidebar for an excellent user experience.",
+  "requestFramePermissions": []
+}
