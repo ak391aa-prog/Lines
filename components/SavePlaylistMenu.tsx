@@ -11,6 +11,7 @@ interface SavePlaylistMenuProps {
   playlists: Playlist[];
   videoId: string;
   onTogglePlaylist: (playlistId: string) => void;
+  onOpenCreatePlaylistModal: () => void;
 }
 
 const PlaylistIcon: React.FC<{name: string}> = ({ name }) => {
@@ -19,7 +20,7 @@ const PlaylistIcon: React.FC<{name: string}> = ({ name }) => {
     return <div className="w-6 h-6" />;
 }
 
-export const SavePlaylistMenu: React.FC<SavePlaylistMenuProps> = ({ isOpen, onClose, playlists, videoId, onTogglePlaylist }) => {
+export const SavePlaylistMenu: React.FC<SavePlaylistMenuProps> = ({ isOpen, onClose, playlists, videoId, onTogglePlaylist, onOpenCreatePlaylistModal }) => {
   if (!isOpen) return null;
 
   return (
@@ -57,7 +58,9 @@ export const SavePlaylistMenu: React.FC<SavePlaylistMenuProps> = ({ isOpen, onCl
       </div>
       
       <div className="border-t border-slate-200 mt-1 pt-1">
-        <button className="w-full flex items-center gap-4 p-3 text-left hover:bg-slate-100 rounded-lg">
+        <button
+            onClick={onOpenCreatePlaylistModal}
+            className="w-full flex items-center gap-4 p-3 text-left hover:bg-slate-100 rounded-lg">
             <PlusIcon className="w-6 h-6 text-slate-600" />
             <span className="font-semibold text-slate-800">Create new playlist</span>
         </button>

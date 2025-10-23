@@ -7,14 +7,18 @@ import { HistoryIcon } from './icons/HistoryIcon';
 import { YourVideosIcon } from './icons/YourVideosIcon';
 import { WatchLaterIcon } from './icons/WatchLaterIcon';
 import { LikeIcon } from './icons/LikeIcon';
+import { FollowedChannel } from '../types';
+import { ShortsIcon } from './icons/ShortsIcon';
 
 interface SidebarProps {
   isOpen: boolean;
   onNavigate: () => void;
+  onOpenShortsPage: () => void;
   onOpenTrendingPage: () => void;
   onOpenFollowingPage: () => void;
   onOpenLibraryPage: () => void;
   activePage: string;
+  followedChannels: FollowedChannel[];
 }
 
 const SidebarItem: React.FC<{ icon: React.ReactElement<React.SVGProps<SVGSVGElement> & { active?: boolean }>; label: string; active?: boolean; onClick: () => void; isSidebarOpen: boolean; }> = ({ icon, label, active, onClick, isSidebarOpen }) => (
@@ -24,7 +28,7 @@ const SidebarItem: React.FC<{ icon: React.ReactElement<React.SVGProps<SVGSVGElem
     className={`group relative flex items-center py-3 rounded-lg transition-colors duration-200 text-base overflow-hidden ${
       active 
         ? 'text-amber-800 font-semibold bg-amber-500/10' 
-        : 'text-slate-600 hover:bg-slate-200/60 font-medium'
+        : 'text-slate-600 hover:bg-amber-500/10 font-medium'
     } ${
         isSidebarOpen ? 'px-4' : 'md:justify-center md:px-3'
     }`}
@@ -71,7 +75,7 @@ const SidebarChannelItem: React.FC<{ avatarUrl: string; name: string; isLive?: b
 );
 
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onNavigate, onOpenTrendingPage, onOpenFollowingPage, onOpenLibraryPage, activePage }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onNavigate, onOpenShortsPage, onOpenTrendingPage, onOpenFollowingPage, onOpenLibraryPage, activePage, followedChannels }) => {
   return (
     <aside 
       className={`
@@ -88,26 +92,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onNavigate, onOpenTren
                 {/* Main navigation part */}
                 <div className="space-y-1">
                     <SidebarItem icon={<HomeIcon />} label="Home" active={activePage === 'home'} onClick={onNavigate} isSidebarOpen={isOpen} />
+                    <SidebarItem icon={<ShortsIcon />} label="Shorts" active={activePage === 'shorts'} onClick={onOpenShortsPage} isSidebarOpen={isOpen} />
                     <SidebarItem icon={<TrendingIcon />} label="Trending" active={activePage === 'trending'} onClick={onOpenTrendingPage} isSidebarOpen={isOpen} />
                     <SidebarItem icon={<SubscriptionsIcon />} label="Following" active={activePage === 'following'} onClick={onOpenFollowingPage} isSidebarOpen={isOpen} />
                     <SidebarItem icon={<LibraryIcon />} label="Library" active={activePage === 'library'} onClick={onOpenLibraryPage} isSidebarOpen={isOpen}/>
                 </div>
                 
                 {/* Subscriptions section is only rendered when sidebar is open, as it's a list, not icons */}
-                {isOpen && (
+                {isOpen && followedChannels.length > 0 && (
                     <>
                         <hr className="border-slate-200 my-4" />
                         <div>
                             <h3 className="px-4 pt-2 pb-2 text-xs font-bold text-slate-400 tracking-widest uppercase">Following</h3>
                             <div className="space-y-0.5">
-                                <SidebarChannelItem avatarUrl="https://picsum.photos/seed/ch2/48/48" name="CodeMasters" isLive />
-                                <SidebarChannelItem avatarUrl="https://picsum.photos/seed/ch1/48/48" name="Nature Explorers" />
-                                <SidebarChannelItem avatarUrl="https://picsum.photos/seed/ch4/48/48" name="FutureVisions" />
-                                <SidebarChannelItem avatarUrl="https://picsum.photos/seed/ch3/48/48" name="DesignScapes" />
-                                <SidebarChannelItem avatarUrl="https://picsum.photos/seed/ch5/48/48" name="Gourmet Chef" />
-                                <SidebarChannelItem avatarUrl="https://picsum.photos/seed/ch6/48/48" name="3DArts" />
-                                <SidebarChannelItem avatarUrl="https://picsum.photos/seed/ch7/48/48" name="ZenLife" />
-                                <SidebarChannelItem avatarUrl="https://picsum.photos/seed/ch8/48/48" name="TechExplained" />
+                                {followedChannels.map(channel => (
+                                    <SidebarChannelItem key={channel.handle} avatarUrl={channel.avatarUrl} name={channel.name} isLive={channel.isLive} />
+                                ))}
                             </div>
                         </div>
                     </>

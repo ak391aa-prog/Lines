@@ -12,7 +12,8 @@ import { ClockIcon } from './icons/ClockIcon';
 import { ShareModal } from './ShareModal';
 import { SavePlaylistMenu } from './SavePlaylistMenu';
 import { formatTimeAgo } from '../utils/timeUtils';
-import { CURRENT_USER_CHANNEL_NAME } from '../services/videoService';
+import { CURRENT_USER_CHANNEL_NAME } from '../data/mockData';
+import { formatCompactNumber } from '../utils/numberUtils';
 
 // Video Player related imports
 import { PlayPauseIcon } from './icons/PlayPauseIcon';
@@ -31,6 +32,8 @@ import { TheaterModeIcon } from './icons/TheaterModeIcon';
 import { ExitTheaterModeIcon } from './icons/ExitTheaterModeIcon';
 import { StarIcon } from './icons/StarIcon';
 import { EditIcon } from './icons/EditIcon';
+import { CreatePlaylistModal } from './CreatePlaylistModal';
+import { ChevronDownIcon } from './icons/ChevronDownIcon';
 
 
 interface VideoPlayerPageProps {
@@ -38,13 +41,17 @@ interface VideoPlayerPageProps {
   allVideos: Video[];
   onSelectVideo: (video: Video) => void;
   onGoBack: () => void;
+  playlists: Playlist[];
+  onTogglePlaylist: (playlistId: string, videoId: string) => void;
+  onCreatePlaylist: (name: string, videoIdToAdd: string) => void;
+  onVideoPlay: (videoId: string) => void;
+  likedVideoIds: Set<string>;
+  dislikedVideoIds: Set<string>;
+  onToggleLike: (videoId: string) => void;
+  onToggleDislike: (videoId: string) => void;
+  followedChannelNames: Set<string>;
+  onToggleSubscription: (channelName: string) => void;
 }
-
-const formatViews = (views: number) => {
-    if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
-    if (views >= 1000) return `${(views / 1000).toFixed(0)}K`;
-    return views.toString();
-};
 
 const formatTime = (seconds: number): string => {
     if (isNaN(seconds)) return '00:00';
@@ -60,15 +67,28 @@ const formatTime = (seconds: number): string => {
 
 const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
-export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVideos, onSelectVideo, onGoBack }) => {
-    const [isSubscribed, setIsSubscribed] = useState(false);
-    const [isLiked, setIsLiked] = useState(false);
-    const [isDisliked, setIsDisliked] = useState(false);
+export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ 
+    video, 
+    allVideos, 
+    onSelectVideo, 
+    onGoBack, 
+    playlists, 
+    onTogglePlaylist, 
+    onCreatePlaylist,
+    onVideoPlay,
+    likedVideoIds,
+    dislikedVideoIds,
+    onToggleLike,
+    onToggleDislike,
+    followedChannelNames,
+    onToggleSubscription,
+}) => {
     const [likeCount, setLikeCount] = useState(video.likes);
     const [showFullDescription, setShowFullDescription] = useState(false);
 
     const [likeAnimation, setLikeAnimation] = useState(false);
     const [dislikeAnimation, setDislikeAnimation] = useState(false);
+    const [followAnimation, setFollowAnimation] = useState(false);
     
     const [isAutoplayEnabled, setIsAutoplayEnabled] = useState(true);
     const [showCountdown, setShowCountdown] = useState(false);
@@ -79,26 +99,28 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     
     const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
-    const [playlists, setPlaylists] = useState<Playlist[]>([
-        { id: 'pl-1', name: 'Watch Later', videoIds: new Set(['2']), thumbnailUrl: 'https://picsum.photos/seed/pl-watch-later/400/225', videoCount: 1 },
-        { id: 'pl-2', name: 'Favorites', videoIds: new Set(), thumbnailUrl: 'https://picsum.photos/seed/pl-favs/400/225', videoCount: 0 },
-        { id: 'pl-3', name: 'React Tutorials', videoIds: new Set(['2']), thumbnailUrl: 'https://picsum.photos/seed/pl-react/400/225', videoCount: 1 },
-    ]);
-    const isSaved = useMemo(() => playlists.some(p => p.videoIds.has(video.id)), [playlists, video.id]);
+    const [isCreatePlaylistModalOpen, setIsCreatePlaylistModalOpen] = useState(false);
+    
+    const isLiked = likedVideoIds.has(video.id);
+    const isDisliked = dislikedVideoIds.has(video.id);
+    const isSubscribed = followedChannelNames.has(video.channelName);
+    
+    const watchLaterPlaylist = useMemo(() => playlists.find(p => p.name === 'Watch Later'), [playlists]);
+    const isInWatchLater = useMemo(() => {
+        return !!watchLaterPlaylist && watchLaterPlaylist.videoIds.has(video.id);
+    }, [watchLaterPlaylist, video.id]);
 
     const handleTogglePlaylist = (playlistId: string) => {
-        setPlaylists(prev => prev.map(p => {
-            if (p.id === playlistId) {
-                const newVideoIds = new Set(p.videoIds);
-                if (newVideoIds.has(video.id)) {
-                    newVideoIds.delete(video.id);
-                } else {
-                    newVideoIds.add(video.id);
-                }
-                return { ...p, videoIds: newVideoIds, videoCount: newVideoIds.size };
-            }
-            return p;
-        }));
+        onTogglePlaylist(playlistId, video.id);
+    };
+
+    const handleCreateNewPlaylist = (name: string) => {
+        onCreatePlaylist(name, video.id);
+    };
+
+    const handleSubscribeClick = () => {
+        onToggleSubscription(video.channelName);
+        setFollowAnimation(true);
     };
     
     // Video player state
@@ -150,6 +172,7 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
         countdownIntervalRef.current = window.setInterval(() => {
             setCountdown(prev => {
                 if (prev <= 1) {
+                    // FIX: Pass countdownIntervalRef.current to clearInterval.
                     clearInterval(countdownIntervalRef.current!);
                     // FIX: Pass nextVideo to onSelectVideo and ensure it's not null.
                     if (nextVideo) {
@@ -230,7 +253,7 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
         }
     };
 
-    const toggleMute = () => {
+    const toggleMute = useCallback(() => {
         if (videoRef.current) {
             const newMutedState = !isMuted;
             videoRef.current.muted = newMutedState;
@@ -242,25 +265,25 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
                 setVolume(0);
             }
         }
-    };
+    }, [isMuted, volume]);
     
-    const toggleFullScreen = () => {
+    const toggleFullScreen = useCallback(() => {
         if (!playerContainerRef.current) return;
         if (!document.fullscreenElement) {
             playerContainerRef.current.requestFullscreen().catch(err => console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`));
         } else {
             document.exitFullscreen();
         }
-    };
+    }, []);
 
-    const togglePictureInPicture = async () => {
+    const togglePictureInPicture = useCallback(async () => {
         if (!videoRef.current) return;
         if (document.pictureInPictureElement) {
             await document.exitPictureInPicture();
         } else if (document.pictureInPictureEnabled) {
             await videoRef.current.requestPictureInPicture();
         }
-    };
+    }, []);
 
     const changePlaybackSpeed = (speed: number) => {
         if (videoRef.current) {
@@ -315,27 +338,24 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
     };
     
     const handleLike = () => {
-        if (isLiked) {
-            setIsLiked(false);
-            setLikeCount(prev => prev - 1);
-        } else {
-            setIsLiked(true);
-            setLikeCount(prev => prev + 1);
-            if (isDisliked) setIsDisliked(false);
-            setLikeAnimation(true);
-        }
+        setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+        onToggleLike(video.id);
+        if (!isLiked) setLikeAnimation(true);
     };
 
     const handleDislike = () => {
-        if (isDisliked) {
-            setIsDisliked(false);
+        if (isLiked) {
+            setLikeCount(prev => prev - 1);
+        }
+        onToggleDislike(video.id);
+        if (!isDisliked) setDislikeAnimation(true);
+    };
+
+    const handleToggleWatchLater = () => {
+        if (watchLaterPlaylist) {
+            onTogglePlaylist(watchLaterPlaylist.id, video.id);
         } else {
-            setIsDisliked(true);
-            if (isLiked) {
-                setIsLiked(false);
-                setLikeCount(prev => prev - 1);
-            }
-            setDislikeAnimation(true);
+            console.error("'Watch Later' playlist not found.");
         }
     };
 
@@ -358,7 +378,7 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
             case 'n': e.preventDefault(); handleNextVideo(); break;
             case 'p': e.preventDefault(); handlePreviousVideo(); break;
         }
-    }, [handlePlayPause, handleNextVideo, handlePreviousVideo]);
+    }, [handlePlayPause, handleNextVideo, handlePreviousVideo, toggleFullScreen, togglePictureInPicture, toggleMute]);
 
      useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
@@ -368,6 +388,8 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
     useEffect(() => {
         const videoElement = videoRef.current;
         if (videoElement) {
+            onVideoPlay(video.id);
+
             videoElement.addEventListener('ended', handleVideoEnded);
             videoElement.addEventListener('timeupdate', handleTimeUpdate);
             videoElement.addEventListener('progress', handleTimeUpdate);
@@ -403,8 +425,13 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
             if (videoEndedTimeoutRef.current) clearTimeout(videoEndedTimeoutRef.current);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         };
-    }, [video.id, handleVideoEnded]);
+    }, [video.id, handleVideoEnded, onVideoPlay]);
     
+    useEffect(() => {
+        setLikeCount(video.likes);
+    }, [video.id, video.likes]);
+
+
     return (
     <div className={`animate-fade-in ${isTheaterMode ? 'bg-black' : ''}`}>
         <div className={`flex flex-col ${!isTheaterMode ? 'lg:flex-row' : ''} gap-6 ${!isTheaterMode ? 'p-2 sm:p-4 lg:p-6' : ''}`}>
@@ -540,7 +567,7 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
                     <div className="flex items-center gap-4 text-slate-500 mt-2">
                         <div className="flex items-center gap-1.5">
                             <EyeIcon className="w-5 h-5"/>
-                            <span>{formatViews(video.viewCount)} views</span>
+                            <span>{formatCompactNumber(video.viewCount)} views</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <ClockIcon className="w-5 h-5" />
@@ -554,7 +581,7 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
                                 <img src={video.channelAvatarUrl} alt={video.channelName} className="w-12 h-12 rounded-full" />
                                 <div>
                                     <h2 className="text-lg font-bold text-slate-900">{video.channelName}</h2>
-                                    <p className="text-slate-500">{video.followers.toLocaleString()} followers</p>
+                                    <p className="text-slate-500">{formatCompactNumber(video.followers)} subscribers</p>
                                 </div>
                             </div>
                             {isOwnVideo ? (
@@ -568,21 +595,25 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
                                 <div className="flex-shrink-0 flex items-center gap-2 w-full sm:w-auto">
                                     <button
                                         onClick={() => console.log('Join button clicked!')}
-                                        className="flex items-center justify-center gap-2 px-4 py-2.5 text-base font-bold rounded-full transition-colors border-2 border-slate-700 text-slate-800 hover:bg-slate-100 flex-1 sm:flex-initial"
+                                        className="flex items-center justify-center gap-2 px-4 py-2 text-base font-semibold rounded-full transition-colors bg-transparent border-2 border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400 flex-1 sm:flex-initial"
                                     >
                                         <StarIcon className="w-5 h-5" />
                                         Join
                                     </button>
-                                    <button onClick={() => setIsSubscribed(!isSubscribed)} 
-                                        className={`px-5 py-2.5 text-base font-bold rounded-full transition-colors flex-1 sm:flex-initial ${isSubscribed ? 'bg-slate-200 text-slate-800' : 'bg-slate-900 text-white hover:bg-black'}`}>
-                                        {isSubscribed ? 'Following' : 'Follow'}
+                                    <button 
+                                        onClick={handleSubscribeClick}
+                                        onAnimationEnd={() => setFollowAnimation(false)}
+                                        className={`px-5 py-2.5 text-base font-bold rounded-full transition-colors flex-1 sm:flex-initial ${
+                                            isSubscribed ? 'bg-slate-200 text-slate-800' : 'bg-slate-900 text-white hover:bg-black'
+                                        } ${followAnimation ? 'animate-follow-click' : ''}`}>
+                                        {isSubscribed ? 'Subscribed' : 'Subscribe'}
                                     </button>
                                 </div>
                             )}
                         </div>
 
                         <div className="category-scroll flex items-center gap-2 pb-2 -mb-2 overflow-x-auto">
-                            <div className="flex items-center bg-slate-100 rounded-full flex-shrink-0">
+                            <div className="flex items-center bg-slate-100 rounded-full flex-shrink-0 shadow-sm hover:shadow-lg transition-shadow duration-300">
                                 <button 
                                     onClick={handleLike}
                                     onAnimationEnd={() => setLikeAnimation(false)}
@@ -602,24 +633,44 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
                                     <DislikeIcon active={isDisliked} className={`w-6 h-6 ${dislikeAnimation ? 'animate-dislike-jiggle' : ''}`} />
                                 </button>
                             </div>
-                            <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors flex-shrink-0">
+                            <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-white rounded-full transition-all flex-shrink-0 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transform duration-200">
                                 <ShareIcon className="w-6 h-6" />
                                 <span className="font-semibold">Share</span>
                             </button>
-                            <div className="relative">
-                                <button onClick={() => setIsSaveMenuOpen(p => !p)} className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors flex-shrink-0">
-                                    <SaveIcon isSaved={isSaved} className="w-6 h-6" />
-                                    <span className="font-semibold">{isSaved ? 'Saved' : 'Save'}</span>
+                            <div className="relative flex items-center bg-slate-100 rounded-full flex-shrink-0 shadow-sm hover:shadow-lg transition-shadow duration-300">
+                                <button
+                                    onClick={handleToggleWatchLater}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-l-full hover:bg-slate-200 transition-colors"
+                                    aria-label={isInWatchLater ? "Remove from Watch Later" : "Save to Watch Later"}
+                                >
+                                    <SaveIcon isSaved={isInWatchLater} className="w-6 h-6" />
+                                    <span className="font-semibold">{isInWatchLater ? 'Saved' : 'Save'}</span>
                                 </button>
-                                <SavePlaylistMenu 
-                                    isOpen={isSaveMenuOpen} 
-                                    onClose={() => setIsSaveMenuOpen(false)}
-                                    playlists={playlists}
-                                    videoId={video.id}
-                                    onTogglePlaylist={handleTogglePlaylist}
-                                />
+                                <div className="w-px h-6 bg-slate-300"></div>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsSaveMenuOpen(p => !p)}
+                                        className="px-2 h-full rounded-r-full hover:bg-slate-200 transition-colors"
+                                        aria-label="Save to playlist"
+                                        aria-haspopup="true"
+                                        aria-expanded={isSaveMenuOpen}
+                                    >
+                                        <ChevronDownIcon className="w-6 h-6" />
+                                    </button>
+                                    <SavePlaylistMenu 
+                                        isOpen={isSaveMenuOpen} 
+                                        onClose={() => setIsSaveMenuOpen(false)}
+                                        playlists={playlists}
+                                        videoId={video.id}
+                                        onTogglePlaylist={handleTogglePlaylist}
+                                        onOpenCreatePlaylistModal={() => {
+                                            setIsSaveMenuOpen(false);
+                                            setIsCreatePlaylistModalOpen(true);
+                                        }}
+                                    />
+                                </div>
                             </div>
-                            <button className="p-3 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors flex-shrink-0">
+                            <button className="p-3 bg-slate-100 hover:bg-white rounded-full transition-all flex-shrink-0 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transform duration-200">
                                 <KebabMenuIcon className="w-6 h-6" />
                             </button>
                         </div>
@@ -656,6 +707,11 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ video, allVide
             onClose={() => setIsShareModalOpen(false)} 
             videoUrl={video.videoUrl} 
             videoTitle={video.title} 
+        />
+        <CreatePlaylistModal
+            isOpen={isCreatePlaylistModalOpen}
+            onClose={() => setIsCreatePlaylistModalOpen(false)}
+            onCreate={handleCreateNewPlaylist}
         />
     </div>
     );

@@ -38,7 +38,8 @@ const VideoCardSkeleton = () => (
 
 export const VideoGrid: React.FC<VideoGridProps> = ({ videos, onSelectVideo, isLoading, loadMoreVideos, hasMore, isFetchingMore, scrollableRootRef }) => {
   const observer = useRef<IntersectionObserver>();
-  const lastVideoElementRef = useCallback(node => {
+  // FIX: Explicitly type the 'node' parameter to avoid potential type inference issues.
+  const lastVideoElementRef = useCallback((node: Element | null) => {
     if (isLoading || isFetchingMore) return;
     if (observer.current) observer.current.disconnect();
     

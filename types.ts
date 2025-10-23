@@ -33,13 +33,16 @@ export interface Video {
   badge?: 'live' | '4k';
   rank?: number;
   countryCode?: string;
+  tags?: string[];
+  visibility?: 'public' | 'unlisted' | 'private';
+  isMadeForKids?: boolean;
 }
 
 export interface FollowedChannel {
   name: string;
   handle: string;
   avatarUrl: string;
-  subscriberCount: string;
+  subscriberCount: number;
   isLive?: boolean;
   notificationLevel?: NotificationLevel;
 }
@@ -52,7 +55,7 @@ export interface Playlist {
   videoCount: number;
 }
 
-export type Page = 'home' | 'trending' | 'following' | 'library' | 'notifications' | 'video' | 'search' | 'profile' | 'settings';
+export type Page = 'home' | 'shorts' | 'trending' | 'following' | 'library' | 'notifications' | 'video' | 'search' | 'profile' | 'settings';
 
 // --- NEW --- Unified Search Suggestion Types
 export type SuggestionType = 'video' | 'channel' | 'keyword' | 'query';

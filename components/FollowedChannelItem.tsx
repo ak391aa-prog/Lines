@@ -1,5 +1,6 @@
 import React from 'react';
 import { FollowedChannel } from '../types';
+import { formatCompactNumber } from '../utils/numberUtils';
 
 interface FollowedChannelItemProps {
   channel: FollowedChannel;

@@ -5,6 +5,7 @@ import { ThumbnailBadge } from './ThumbnailBadge';
 import { LazyImage } from './LazyImage';
 import { RankingBadge } from './RankingBadge';
 import { formatTimeAgo } from '../utils/timeUtils';
+import { formatCompactNumber } from '../utils/numberUtils';
 
 interface TrendingVideoCardProps {
   video: Video;
@@ -51,7 +52,7 @@ const TrendingVideoCardComponent: React.FC<TrendingVideoCardProps> = ({ video, r
             <p className="text-sm text-slate-600 group-hover:text-slate-800 transition-colors">{video.channelName}</p>
         </div>
         <div className="text-sm text-slate-500 mt-1">
-            <span>{video.viewCount.toLocaleString()} views</span>
+            <span>{formatCompactNumber(video.viewCount)} views</span>
             <span className="mx-1.5">&middot;</span>
             <span>{formatTimeAgo(video.uploadDate)}</span>
         </div>

@@ -11,8 +11,9 @@ import {
     CURRENT_USER_ID, 
     CURRENT_USER_AVATAR, 
     CURRENT_USER_NAME 
-} from '../services/videoService';
+} from '../data/mockData';
 import { formatTimeAgo } from '../utils/timeUtils';
+import { formatCompactNumber } from '../utils/numberUtils';
 
 const MAX_COMMENT_LENGTH = 280;
 
@@ -141,7 +142,7 @@ const CommentItem: React.FC<{
                             className={`flex items-center gap-1.5 p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors ${isLiked ? 'text-amber-500' : 'text-slate-600'}`}>
                             <LikeIcon active={isLiked} className={`w-5 h-5 ${likeAnimation ? 'animate-like-bounce' : ''}`} />
                         </button>
-                        <span className="text-sm font-medium text-slate-600 min-w-[1rem]">{likeCount > 0 ? likeCount : ''}</span>
+                        <span className="text-sm font-medium text-slate-600 min-w-[1rem]">{likeCount > 0 ? formatCompactNumber(likeCount) : ''}</span>
                         <button onClick={handleDislike} aria-pressed={isDisliked} onAnimationEnd={() => setDislikeAnimation(false)}
                             className={`p-2 rounded-full hover:bg-slate-100 transition-colors ${isDisliked ? 'text-amber-500' : 'text-slate-600'}`}>
                             <DislikeIcon active={isDisliked} className={`w-5 h-5 ${dislikeAnimation ? 'animate-dislike-jiggle' : ''}`} />

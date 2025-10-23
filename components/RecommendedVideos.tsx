@@ -2,6 +2,7 @@ import React from 'react';
 import { Video } from '../types';
 import { LazyImage } from './LazyImage';
 import { RankingBadge } from './RankingBadge';
+import { formatCompactNumber } from '../utils/numberUtils';
 
 interface RecommendedVideosProps {
   videos: Video[];
@@ -71,7 +72,7 @@ const RecommendedVideoCardComponent: React.FC<{
                 <h4 className={`text-sm font-semibold text-slate-800 line-clamp-2 leading-snug ${isCountingDown ? 'text-amber-700' : ''}`}>{video.title}</h4>
                 <p className="text-xs text-slate-500 mt-1">{video.channelName}</p>
                 <div className="text-xs text-slate-500">
-                    <span>{video.viewCount.toLocaleString()} views</span>
+                    <span>{formatCompactNumber(video.viewCount)} views</span>
                 </div>
             </div>
         </button>

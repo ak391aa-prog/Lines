@@ -4,6 +4,7 @@ import { ThumbnailBadge } from './ThumbnailBadge';
 import { LazyImage } from './LazyImage';
 import { RankingBadge } from './RankingBadge';
 import { formatTimeAgo } from '../utils/timeUtils';
+import { formatCompactNumber } from '../utils/numberUtils';
 
 interface HorizontalVideoCardProps {
   video: Video;
@@ -36,7 +37,7 @@ const HorizontalVideoCardComponent: React.FC<HorizontalVideoCardProps> = ({ vide
         </h3>
         <p className="text-sm text-slate-500 mt-1">{video.channelName}</p>
         <div className="text-sm text-slate-500">
-          <span>{video.viewCount.toLocaleString()} views</span>
+          <span>{formatCompactNumber(video.viewCount)} views</span>
           <span className="mx-1">&middot;</span>
           <span>{formatTimeAgo(video.uploadDate)}</span>
         </div>

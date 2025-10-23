@@ -3,8 +3,8 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { VideoGrid } from './components/VideoGrid';
 import { VideoPlayerPage } from './components/VideoPlayerPage';
-import { videoService } from './services/videoService';
-import { Video, Page, Suggestion } from './types';
+import { backendService } from './services/backendService';
+import { Video, Page, Suggestion, Playlist, FollowedChannel } from './types';
 import { useWindowSize } from './hooks/useWindowSize';
 import { Footer } from './components/Footer';
 import { BottomNavBar } from './components/BottomNavBar';
@@ -16,11 +16,12 @@ import { VideoPlayerPageLoader } from './components/VideoPlayerPageLoader';
 import { TrendingPage } from './components/TrendingPage';
 import { FollowingPage } from './components/FollowingPage';
 import { LibraryPage } from './components/LibraryPage';
-import { CreateModal } from './components/CreateModal';
+import { UploadPage } from './components/UploadPage';
 import { VoiceSearchModal } from './components/VoiceSearchModal';
 import { ProfilePage } from './components/ProfilePage';
 import { SettingsPage } from './components/SettingsPage';
 import { Toast } from './components/Toast';
+import { ShortsPage } from './components/ShortsPage';
 
 const CATEGORIES = ['All', 'Trending', 'Gaming', 'Music', 'Coding', 'Design', 'Travel', 'Cooking', 'Health', 'Technology'];
 
@@ -45,9 +46,19 @@ function App() {
 
   // Modal states
   const [isSearchPageOpen, setIsSearchPageOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isUploadPageOpen, setIsUploadPageOpen] = useState(false);
   const [isVoiceSearchOpen, setIsVoiceSearchOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // --- NEW: State managed by backendService ---
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [likedVideoIds, setLikedVideoIds] = useState<Set<string>>(new Set());
+  const [dislikedVideoIds, setDislikedVideoIds] = useState<Set<string>>(new Set());
+  const [followedChannels, setFollowedChannels] = useState<FollowedChannel[]>([]);
+  const [historyVideos, setHistoryVideos] = useState<Video[]>([]);
+  const [likedVideos, setLikedVideos] = useState<Video[]>([]);
+  const [followedChannelNames, setFollowedChannelNames] = useState<Set<string>>(new Set());
+
 
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
@@ -61,14 +72,88 @@ function App() {
 
   const mainContentRef = useRef<HTMLElement>(null);
 
-
+  // --- Data Loading Effect ---
   useEffect(() => {
     // This effect now fetches all videos once for recommendations/player page context
     // The grid itself will use paginated fetching
-    videoService.getVideos({ page: 1, limit: 100 }).then(data => {
+    backendService.getVideos({ page: 1, limit: 100 }).then(data => {
       setAllVideos(data.videos);
     });
+
+    // Load all persisted data from our backend service
+    setPlaylists(backendService.getPlaylists());
+    setLikedVideoIds(backendService.getLikedVideoIds());
+    setDislikedVideoIds(backendService.getDislikedVideoIds());
+    const followed = backendService.getFollowedChannels();
+    setFollowedChannels(followed);
+    setFollowedChannelNames(new Set(followed.map(c => c.name)));
+    setHistoryVideos(backendService.getWatchHistory());
   }, []);
+
+  useEffect(() => {
+    // Update liked videos list when likedVideoIds or allVideos change
+    const liked = allVideos.filter(v => likedVideoIds.has(v.id));
+    setLikedVideos(liked);
+  }, [likedVideoIds, allVideos]);
+
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+  }, []);
+
+  // --- Backend Interaction Handlers ---
+
+  const handleToggleVideoInPlaylist = useCallback((playlistId: string, videoId: string) => {
+    backendService.toggleVideoInPlaylist(playlistId, videoId);
+    const updatedPlaylists = backendService.getPlaylists();
+    const toggledPlaylist = updatedPlaylists.find(p => p.id === playlistId);
+    if(toggledPlaylist){
+        const message = toggledPlaylist.videoIds.has(videoId) ? `Saved to "${toggledPlaylist.name}"` : `Removed from "${toggledPlaylist.name}"`;
+        showToast(message);
+    }
+    setPlaylists(updatedPlaylists);
+  }, [showToast]);
+
+  const handleCreatePlaylist = useCallback((name: string, videoIdToAdd?: string) => {
+    backendService.createPlaylist(name, videoIdToAdd);
+    setPlaylists(backendService.getPlaylists());
+    showToast(`Playlist "${name}" created`);
+  }, [showToast]);
+
+  const handleAddToHistory = useCallback((videoId: string) => {
+    backendService.addToWatchHistory(videoId);
+    setHistoryVideos(backendService.getWatchHistory());
+  }, []);
+
+  const handleToggleLike = useCallback((videoId: string) => {
+    backendService.toggleLike(videoId);
+    setLikedVideoIds(backendService.getLikedVideoIds());
+    setDislikedVideoIds(backendService.getDislikedVideoIds());
+  }, []);
+  
+  const handleToggleDislike = useCallback((videoId: string) => {
+    backendService.toggleDislike(videoId);
+    setLikedVideoIds(backendService.getLikedVideoIds());
+    setDislikedVideoIds(backendService.getDislikedVideoIds());
+  }, []);
+  
+  const handleToggleSubscription = useCallback((channelName: string) => {
+    backendService.toggleSubscription(channelName);
+    const updatedFollowed = backendService.getFollowedChannels();
+    setFollowedChannels(updatedFollowed);
+    setFollowedChannelNames(new Set(updatedFollowed.map(c => c.name)));
+  }, []);
+
+  const handleUploadVideo = useCallback((newVideoData: Omit<Video, 'id'>) => {
+    const newVideo = backendService.addVideo(newVideoData);
+    setAllVideos(prev => [newVideo, ...prev]);
+    setIsUploadPageOpen(false);
+    showToast(`"${newVideo.title}" has been published!`);
+    // After uploading, refresh the main page video list to show the new video
+    if (activePage === 'home' && activeCategory === 'All' && !searchQuery) {
+      setVideos(prev => [newVideo, ...prev]);
+    }
+  }, [showToast, activePage, activeCategory, searchQuery]);
+
 
   useEffect(() => {
     // Effect to reset and fetch videos when filters change
@@ -76,7 +161,7 @@ function App() {
       setIsLoading(true);
       setVideos([]);
       setPaginationPage(1);
-      const { videos: newVideos, hasMore: newHasMore } = await videoService.getVideos({
+      const { videos: newVideos, hasMore: newHasMore } = await backendService.getVideos({
         page: 1,
         category: activeCategory,
         query: searchQuery
@@ -98,7 +183,7 @@ function App() {
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
       const fetchSuggestions = async () => {
-        const newSuggestions = await videoService.getSearchSuggestions(searchQuery);
+        const newSuggestions = await backendService.getSearchSuggestions(searchQuery);
         setSuggestions(newSuggestions);
       };
       
@@ -141,7 +226,7 @@ function App() {
 
     setIsFetchingMore(true);
     const nextPage = paginationPage + 1;
-    const { videos: newVideos, hasMore: newHasMore } = await videoService.getVideos({
+    const { videos: newVideos, hasMore: newHasMore } = await backendService.getVideos({
       page: nextPage,
       category: activeCategory,
       query: searchQuery
@@ -167,7 +252,7 @@ function App() {
     }
 
     // Simulate fetching full video details
-    videoService.getVideoById(video.id).then(fullVideo => {
+    backendService.getVideoById(video.id).then(fullVideo => {
         if (fullVideo) {
             setSelectedVideo(fullVideo);
             setPageKey(fullVideo.id);
@@ -233,10 +318,6 @@ function App() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
-  }, []);
-
   const suggestionVideos = useMemo(() => {
     return [...allVideos].sort((a, b) => b.likes - a.likes).slice(0, 5);
   }, [allVideos]);
@@ -256,6 +337,16 @@ function App() {
           allVideos={allVideos} 
           onSelectVideo={handleSelectVideo}
           onGoBack={handleGoHome}
+          playlists={playlists}
+          onTogglePlaylist={handleToggleVideoInPlaylist}
+          onCreatePlaylist={handleCreatePlaylist}
+          onVideoPlay={handleAddToHistory}
+          likedVideoIds={likedVideoIds}
+          dislikedVideoIds={dislikedVideoIds}
+          onToggleLike={handleToggleLike}
+          onToggleDislike={handleToggleDislike}
+          followedChannelNames={followedChannelNames}
+          onToggleSubscription={handleToggleSubscription}
         />
       );
     }
@@ -284,14 +375,16 @@ function App() {
             {!selectedVideo && hasMore && videos.length > 0 && <Footer />}
           </div>
         );
+      case 'shorts':
+        return <ShortsPage />;
       case 'trending':
         return <TrendingPage onSelectVideo={handleSelectVideo} />;
       case 'following':
-        return <FollowingPage allVideos={allVideos} onSelectVideo={handleSelectVideo} />;
+        return <FollowingPage allVideos={allVideos} onSelectVideo={handleSelectVideo} followedChannels={followedChannels} />;
       case 'library':
-        return <LibraryPage allVideos={allVideos} onSelectVideo={handleSelectVideo} />;
+        return <LibraryPage allVideos={allVideos} onSelectVideo={handleSelectVideo} playlists={playlists} onCreatePlaylist={handleCreatePlaylist} historyVideos={historyVideos} likedVideos={likedVideos} />;
       case 'profile':
-        return <ProfilePage allVideos={allVideos} onSelectVideo={handleSelectVideo} />;
+        return <ProfilePage allVideos={allVideos} onSelectVideo={handleSelectVideo} onGoBack={handleGoHome} />;
       case 'settings':
         return <SettingsPage onGoBack={handleGoHome} onShowToast={showToast} />;
       case 'notifications':
@@ -318,7 +411,7 @@ function App() {
           onOpenSearchPage={() => setIsSearchPageOpen(true)}
           onOpenNotificationsPage={() => changePage('notifications')}
           onOpenVoiceSearch={() => setIsVoiceSearchOpen(true)}
-          onOpenCreateModal={() => setIsCreateModalOpen(true)}
+          onOpenUploadPage={() => setIsUploadPageOpen(true)}
           onOpenProfilePage={() => changePage('profile')}
           onOpenSettingsPage={() => changePage('settings')}
         />
@@ -328,10 +421,12 @@ function App() {
           <Sidebar 
             isOpen={isSidebarOpen} 
             onNavigate={handleGoHome}
+            onOpenShortsPage={() => changePage('shorts')}
             onOpenTrendingPage={() => changePage('trending')}
             onOpenFollowingPage={() => changePage('following')}
             onOpenLibraryPage={() => changePage('library')}
             activePage={appPage}
+            followedChannels={followedChannels}
           />
         )}
 
@@ -358,10 +453,10 @@ function App() {
       {showChrome && (
           <BottomNavBar 
             onGoHome={handleGoHome} 
-            onOpenTrendingPage={() => changePage('trending')} 
+            onOpenShortsPage={() => changePage('shorts')}
             onOpenFollowingPage={() => changePage('following')}
             onOpenLibraryPage={() => changePage('library')}
-            onOpenCreateModal={() => setIsCreateModalOpen(true)} 
+            onOpenUploadPage={() => setIsUploadPageOpen(true)} 
             activePage={appPage} 
           />
       )}
@@ -371,8 +466,6 @@ function App() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onClose={() => setIsSearchPageOpen(false)}
-          searchResults={videos}
-          isLoading={isLoading}
           onSelectVideo={(video) => {
             addRecentSearch(searchQuery);
             handleSelectVideo(video);
@@ -383,7 +476,14 @@ function App() {
         />
       )}
 
-      <CreateModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+      {isUploadPageOpen && (
+        <UploadPage
+            onClose={() => setIsUploadPageOpen(false)}
+            onUpload={handleUploadVideo}
+            playlists={playlists}
+            categories={CATEGORIES.filter(c => c !== 'All' && c !== 'Trending')}
+        />
+      )}
       <VoiceSearchModal isOpen={isVoiceSearchOpen} onClose={() => setIsVoiceSearchOpen(false)} />
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>

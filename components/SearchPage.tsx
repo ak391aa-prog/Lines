@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Video } from '../types';
+import { backendService } from '../services/backendService';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import { SearchIcon } from './icons/SearchIcon';
 import { SpinnerIcon } from './icons/SpinnerIcon';
@@ -13,9 +14,7 @@ interface SearchPageProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onClose: () => void;
-  searchResults: Video[];
   onSelectVideo: (video: Video) => void;
-  isLoading: boolean;
   recentSearches: string[];
   onClearRecentSearches: () => void;
   onRecentSearchClick: (query: string) => void;
@@ -25,14 +24,79 @@ export const SearchPage: React.FC<SearchPageProps> = ({
   searchQuery,
   onSearchChange,
   onClose,
-  searchResults,
   onSelectVideo,
-  isLoading,
   recentSearches,
   onClearRecentSearches,
   onRecentSearchClick,
 }) => {
+  const [results, setResults] = useState<Video[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const scrollContainerRef = useRef<HTMLElement>(null);
+
   const hasTyped = searchQuery.length > 0;
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setResults([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      setIsLoading(true);
+      setPage(1);
+      setResults([]);
+      backendService.getVideos({ query: searchQuery, page: 1, limit: 12 })
+        .then(({ videos, hasMore }) => {
+          setResults(videos);
+          setHasMore(hasMore);
+          setIsLoading(false);
+        });
+    }, 300); // Debounce search
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
+  const loadMoreResults = useCallback(async () => {
+    if (isFetchingMore || !hasMore || !searchQuery.trim()) return;
+
+    setIsFetchingMore(true);
+    const nextPage = page + 1;
+    const { videos: newVideos, hasMore: newHasMore } = await backendService.getVideos({
+      query: searchQuery,
+      page: nextPage,
+      limit: 12
+    });
+
+    setResults(prev => [...prev, ...newVideos]);
+    setPage(nextPage);
+    setHasMore(newHasMore);
+    setIsFetchingMore(false);
+  }, [isFetchingMore, hasMore, page, searchQuery]);
+  
+  const observer = useRef<IntersectionObserver>();
+  // FIX: Explicitly type the 'node' parameter to avoid potential type inference issues.
+  const lastResultElementRef = useCallback((node: Element | null) => {
+    if (isLoading || isFetchingMore) return;
+    if (observer.current) observer.current.disconnect();
+
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMoreResults();
+      }
+    }, {
+      root: scrollContainerRef.current,
+      rootMargin: '0px 0px 300px 0px', // Trigger when 300px from the bottom
+    });
+
+    if (node) observer.current.observe(node);
+  }, [isLoading, isFetchingMore, hasMore, loadMoreResults]);
+
 
   return (
     <div className="fixed inset-0 bg-slate-50 z-50 flex flex-col animate-fade-in">
@@ -78,22 +142,43 @@ export const SearchPage: React.FC<SearchPageProps> = ({
       </header>
 
       {/* Content Area */}
-      <main className="flex-1 overflow-y-auto">
+      <main ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         {isLoading && hasTyped && (
           <div className="flex justify-center items-center p-10">
             <SpinnerIcon className="w-8 h-8 text-amber-500 animate-spin" />
           </div>
         )}
+
         {!isLoading && hasTyped && (
           <div className="p-2 sm:p-4">
-            {searchResults.length > 0 ? (
-              <div className="space-y-4">
-                {searchResults.map((video, index) => (
-                  <div key={video.id} className="video-card-enter" style={{ animationDelay: `${index * 50}ms` }}>
-                    <SearchResultCard video={video} onSelectVideo={onSelectVideo} />
+            {results.length > 0 ? (
+              <>
+                <div className="space-y-4">
+                  {results.map((video, index) => {
+                    const isLastElement = results.length === index + 1;
+                    return (
+                      <div 
+                        ref={isLastElement ? lastResultElementRef : null}
+                        key={`${video.id}-${index}`}
+                        className="video-card-enter" 
+                        style={{ animationDelay: `${index % 12 * 40}ms` }}
+                      >
+                        <SearchResultCard video={video} onSelectVideo={onSelectVideo} />
+                      </div>
+                    )
+                  })}
+                </div>
+                {isFetchingMore && (
+                  <div className="flex justify-center items-center p-6">
+                      <SpinnerIcon className="w-8 h-8 text-amber-500 animate-spin" />
                   </div>
-                ))}
-              </div>
+                )}
+                {!hasMore && !isFetchingMore && results.length > 0 && (
+                  <div className="text-center py-10">
+                      <p className="text-slate-500 font-semibold text-lg">You've reached the end!</p>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-16 px-4">
                 <SearchIcon className="w-16 h-16 text-slate-400 mx-auto" />

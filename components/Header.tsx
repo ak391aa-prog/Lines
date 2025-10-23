@@ -21,7 +21,7 @@ interface HeaderProps {
   onOpenSearchPage: () => void;
   onOpenNotificationsPage: () => void;
   onOpenVoiceSearch: () => void;
-  onOpenCreateModal: () => void;
+  onOpenUploadPage: () => void;
   onOpenProfilePage: () => void;
   onOpenSettingsPage: () => void;
 }
@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSearchPage,
   onOpenNotificationsPage,
   onOpenVoiceSearch,
-  onOpenCreateModal,
+  onOpenUploadPage,
   onOpenProfilePage,
   onOpenSettingsPage,
 }) => {
@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
       
       {/* --- Left side content (Menu, Logo) --- */}
       <div className="flex items-center gap-1 sm:gap-4">
-        <button onClick={onToggleSidebar} className="p-3 rounded-full hover:bg-slate-100 transition-colors" aria-label="Toggle navigation menu">
+        <button onClick={onToggleSidebar} className="p-3 rounded-full hover:bg-amber-100/80 active:bg-amber-200/80 active:scale-95 transition-all duration-200" aria-label="Toggle navigation menu">
           <MenuIcon className="h-7 w-7 text-slate-600" />
         </button>
         <button onClick={onLogoClick} className="flex items-center gap-2" aria-label="Lines homepage">
@@ -145,7 +145,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
         </form>
-        <button onClick={onOpenVoiceSearch} className="p-3 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors" aria-label="Search with your voice">
+        <button onClick={onOpenVoiceSearch} className="p-3 bg-slate-100 hover:bg-amber-100/80 active:bg-amber-200/80 active:scale-95 rounded-full transition-all duration-200 lg:hidden" aria-label="Search with your voice">
             <MicrophoneIcon className="h-6 w-6 text-slate-600"/>
         </button>
       </div>
@@ -154,13 +154,13 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-1 sm:gap-2">
         <button 
             onClick={onOpenSearchPage}
-            className="p-3 rounded-full hover:bg-slate-100 transition-colors sm:hidden" aria-label="Open search">
+            className="p-3 rounded-full hover:bg-amber-100/80 active:bg-amber-200/80 active:scale-95 transition-all duration-200 sm:hidden" aria-label="Open search">
             <SearchIcon className="h-7 w-7 text-slate-600" />
         </button>
         
         <button 
-            onClick={onOpenCreateModal}
-            className="relative p-3 rounded-full hover:bg-slate-100 transition-colors hidden sm:flex" 
+            onClick={onOpenUploadPage}
+            className="relative p-3 rounded-full hover:bg-amber-100/80 active:bg-amber-200/80 active:scale-95 transition-all duration-200 hidden sm:flex" 
             aria-label="Create a video"
         >
             <PlusIcon className="h-7 w-7 text-slate-600" />
@@ -170,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative">
             <button 
                 onClick={onOpenNotificationsPage}
-                className="relative p-3 rounded-full hover:bg-slate-100 transition-colors" 
+                className="relative p-3 rounded-full hover:bg-amber-100/80 active:bg-amber-200/80 active:scale-95 transition-all duration-200" 
                 aria-label="View notifications. New notifications available."
             >
                 <BellIcon className="h-7 w-7 text-slate-600" />

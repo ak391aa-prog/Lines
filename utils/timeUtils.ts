@@ -1,4 +1,5 @@
-import { formatDistanceToNowStrict, parseISO } from 'date-fns';
+import formatDistanceToNowStrict from 'date-fns/formatDistanceToNowStrict';
+import parseISO from 'date-fns/parseISO';
 
 export const formatTimeAgo = (dateString: string): string => {
   try {

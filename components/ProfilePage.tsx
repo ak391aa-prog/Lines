@@ -12,21 +12,26 @@ import { SpinnerIcon } from './icons/SpinnerIcon';
 import { HomeIcon } from './icons/HomeIcon';
 import { ChevronRightIcon } from './icons/ChevronRightIcon';
 import { formatTimeAgo } from '../utils/timeUtils';
+import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
+import { ShareIcon } from './icons/ShareIcon';
+import { CURRENT_USER_CHANNEL_NAME } from '../data/mockData';
+import { formatCompactNumber } from '../utils/numberUtils';
 
 
 interface ProfilePageProps {
   allVideos: Video[];
   onSelectVideo: (video: Video) => void;
+  onGoBack: () => void;
 }
 
 const MOCK_FOLLOWED_CHANNELS: FollowedChannel[] = [
-    { name: 'Nature Explorers', handle: '@nature', subscriberCount: '2.3M', avatarUrl: 'https://picsum.photos/seed/ch1/48/48', notificationLevel: 'all' },
-    { name: 'FutureVisions', handle: '@future', subscriberCount: '4.1M', avatarUrl: 'https://picsum.photos/seed/ch4/48/48', notificationLevel: 'personalized' },
-    { name: 'DesignScapes', handle: '@design', subscriberCount: '780K', avatarUrl: 'https://picsum.photos/seed/ch3/48/48', notificationLevel: 'none' },
-    { name: 'Gourmet Chef', handle: '@chef', subscriberCount: '950K', avatarUrl: 'https://picsum.photos/seed/ch5/48/48', isLive: true, notificationLevel: 'all' },
-    { name: '3DArts', handle: '@3darts', subscriberCount: '450K', avatarUrl: 'https://picsum.photos/seed/ch6/48/48', notificationLevel: 'personalized' },
-    { name: 'ZenLife', handle: '@zen', subscriberCount: '620K', avatarUrl: 'https://picsum.photos/seed/ch7/48/48', notificationLevel: 'personalized' },
-    { name: 'TechExplained', handle: '@techexplained', subscriberCount: '3.1M', avatarUrl: 'https://picsum.photos/seed/ch8/48/48', notificationLevel: 'none' },
+    { name: 'Nature Explorers', handle: '@nature', subscriberCount: 2300000, avatarUrl: 'https://picsum.photos/seed/ch1/48/48', notificationLevel: 'all' },
+    { name: 'FutureVisions', handle: '@future', subscriberCount: 4100000, avatarUrl: 'https://picsum.photos/seed/ch4/48/48', notificationLevel: 'personalized' },
+    { name: 'DesignScapes', handle: '@design', subscriberCount: 780000, avatarUrl: 'https://picsum.photos/seed/ch3/48/48', notificationLevel: 'none' },
+    { name: 'Gourmet Chef', handle: '@chef', subscriberCount: 950000, avatarUrl: 'https://picsum.photos/seed/ch5/48/48', isLive: true, notificationLevel: 'all' },
+    { name: '3DArts', handle: '@3darts', subscriberCount: 450000, avatarUrl: 'https://picsum.photos/seed/ch6/48/48', notificationLevel: 'personalized' },
+    { name: 'ZenLife', handle: '@zen', subscriberCount: 620000, avatarUrl: 'https://picsum.photos/seed/ch7/48/48', notificationLevel: 'personalized' },
+    { name: 'TechExplained', handle: '@techexplained', subscriberCount: 3100000, avatarUrl: 'https://picsum.photos/seed/ch8/48/48', notificationLevel: 'none' },
 ];
 
 const MOCK_PLAYLISTS: Playlist[] = [
@@ -56,14 +61,14 @@ const TabButton: React.FC<{
     onClick={onClick}
     role="tab"
     aria-selected={isActive}
-    className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-3 text-base font-semibold border-b-4 transition-all whitespace-nowrap ${
+    className={`flex items-center gap-2 px-4 py-2 my-2 rounded-lg text-base font-semibold transition-colors whitespace-nowrap ${
         isActive 
-            ? 'border-slate-800 text-slate-900' 
-            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+            ? 'bg-slate-900 text-white' 
+            : 'text-slate-600 hover:bg-slate-200'
     }`}
   >
     {React.cloneElement(icon, { className: 'w-6 h-6', active: isActive })}
-    <span className="hidden sm:block">{label}</span>
+    <span>{label}</span>
   </button>
 );
 
@@ -72,7 +77,7 @@ const ChannelCard: React.FC<{ channel: FollowedChannel }> = ({ channel }) => (
         <img src={channel.avatarUrl} alt={channel.name} className="w-24 h-24 rounded-full mb-3" />
         <h3 className="text-lg font-bold text-slate-800">{channel.name}</h3>
         <p className="text-sm text-slate-500">{channel.handle}</p>
-        <p className="text-sm text-slate-500">{channel.subscriberCount} subscribers</p>
+        <p className="text-sm text-slate-500">{formatCompactNumber(channel.subscriberCount)} subscribers</p>
         <button className="mt-3 px-6 py-2 text-sm font-bold bg-slate-900 text-white rounded-full hover:bg-black transition-colors">
             Follow
         </button>
@@ -125,22 +130,24 @@ const ProfileBottomNav: React.FC<{ activeTab: ProfileTab; onTabClick: (tab: Prof
 );
 
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ allVideos, onSelectVideo }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ allVideos, onSelectVideo, onGoBack }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('Home');
   const [sortOrder, setSortOrder] = useState<'Latest' | 'Popular'>('Latest');
   
   const channelData = useMemo(() => {
-    const ownVideos = allVideos.filter(v => v.channelName === 'CodeMasters');
+    const ownVideos = allVideos.filter(v => v.channelName === CURRENT_USER_CHANNEL_NAME);
     const popularVideo = [...ownVideos].sort((a,b) => b.viewCount - a.viewCount)[0];
     const latestVideos = [...ownVideos].sort((a,b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime());
+    const firstVideo = latestVideos[latestVideos.length - 1];
+
     return {
         ownVideos,
         popularVideo,
         latestVideos,
-        followerCount: '1.25M',
+        followerCount: 1250000,
         videoCount: ownVideos.length,
-        joinDate: 'Mar 15, 2022',
-        totalViews: allVideos.reduce((acc, v) => v.channelName === 'CodeMasters' ? acc + v.viewCount : acc, 0)
+        joinDate: firstVideo ? new Date(firstVideo.uploadDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric'}) : 'N/A',
+        totalViews: allVideos.reduce((acc, v) => v.channelName === CURRENT_USER_CHANNEL_NAME ? acc + v.viewCount : acc, 0)
     }
   }, [allVideos]);
 
@@ -243,7 +250,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ allVideos, onSelectVid
                      <h3 className="text-xl font-bold text-slate-900 mb-3">Stats</h3>
                      <div className="space-y-3 text-slate-600 border-t border-slate-200 pt-3">
                         <p>Joined {channelData.joinDate}</p>
-                        <p>{channelData.totalViews.toLocaleString()} views</p>
+                        <p>{formatCompactNumber(channelData.totalViews)} views</p>
                     </div>
                 </div>
             </div>
@@ -263,43 +270,61 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ allVideos, onSelectVid
 
   return (
     <div className="bg-slate-50 min-h-full pb-16 sm:pb-0">
-      <header className="bg-white">
-        <div className="h-32 sm:h-48 md:h-64 bg-slate-200">
-             <img 
-                src="https://picsum.photos/seed/banner/1500/400" 
-                alt="Channel banner"
-                className="w-full h-full object-cover"
-             />
-        </div>
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-12 sm:-mt-16 pb-6">
-                 <div className="flex-shrink-0">
-                    <img
-                        src="https://picsum.photos/seed/ch2/128/128"
-                        alt="Channel Avatar"
-                        className="h-24 w-24 sm:h-32 sm:w-32 rounded-full ring-4 ring-white shadow-lg"
-                    />
-                 </div>
-                 <div className="flex-grow sm:ml-6 mt-4 sm:mt-0 text-center sm:text-left">
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900">CodeMasters</h1>
-                    <div className="flex items-center justify-center sm:justify-start flex-wrap gap-x-4 gap-y-1 text-slate-500 mt-1">
-                        <span>@codemasters</span>
-                        <span>{channelData.followerCount} followers</span>
-                        <span>{channelData.videoCount} videos</span>
-                    </div>
-                 </div>
-                 <div className="flex-shrink-0 mt-4 sm:mt-0 w-full sm:w-auto">
-                    <button className="flex w-full sm:w-auto items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-full transition-colors bg-slate-100 text-slate-800 hover:bg-slate-200">
-                        <UserCogIcon className="w-5 h-5"/>
-                        Manage Account
-                    </button>
-                 </div>
+        <header className="relative bg-white pb-6">
+            <div className="h-32 sm:h-48 md:h-64 bg-slate-200 relative">
+                <img 
+                    src="https://picsum.photos/seed/banner/1500/400" 
+                    alt="Channel banner"
+                    className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                
+                <button 
+                    onClick={onGoBack} 
+                    className="absolute top-4 left-4 z-10 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors"
+                    aria-label="Go back"
+                >
+                    <ArrowLeftIcon className="w-6 h-6" />
+                </button>
+                <button 
+                    className="absolute top-4 right-4 z-10 p-2 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors"
+                    aria-label="Share channel"
+                >
+                    <ShareIcon className="w-6 h-6" />
+                </button>
             </div>
-        </div>
-      </header>
+
+            <div className="max-w-7xl mx-auto px-4 md:px-6">
+                <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20">
+                    <div className="flex-shrink-0">
+                        <img
+                            src="https://picsum.photos/seed/ch2/128/128"
+                            alt="Channel Avatar"
+                            className="h-28 w-28 sm:h-40 sm:w-40 rounded-full ring-4 ring-white shadow-lg bg-slate-300"
+                        />
+                    </div>
+                    <div className="flex-grow sm:ml-6 mt-4 sm:mt-0 text-center sm:text-left">
+                        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900">{CURRENT_USER_CHANNEL_NAME}</h1>
+                        <div className="flex items-center justify-center sm:justify-start flex-wrap gap-x-4 gap-y-1 text-slate-500 mt-2">
+                            <span>@codemasters</span>
+                            <span className="hidden sm:inline">&middot;</span>
+                            <span>{formatCompactNumber(channelData.followerCount)} subscribers</span>
+                            <span className="hidden sm:inline">&middot;</span>
+                            <span>{channelData.videoCount} videos</span>
+                        </div>
+                    </div>
+                    <div className="flex-shrink-0 mt-4 sm:pb-2 w-full sm:w-auto">
+                        <button className="flex w-full sm:w-auto items-center justify-center gap-2 px-5 py-3 text-base font-semibold rounded-full transition-colors bg-slate-100 text-slate-800 hover:bg-slate-200">
+                            <UserCogIcon className="w-5 h-5"/>
+                            Manage
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
        <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-200">
           <nav className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6">
-              <div className="category-scroll hidden sm:flex items-center overflow-x-auto" role="tablist">
+              <div className="category-scroll hidden sm:flex items-center overflow-x-auto gap-2" role="tablist">
                   {TABS.map(tab => (
                     <TabButton 
                         key={tab.name}
@@ -312,7 +337,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ allVideos, onSelectVid
               </div>
           </nav>
        </div>
-      <main className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {renderContent()}
       </main>
       <ProfileBottomNav activeTab={activeTab} onTabClick={setActiveTab} />

@@ -9,11 +9,11 @@ import { ListViewIcon } from './icons/ListViewIcon';
 import { ChevronUpIcon } from './icons/ChevronUpIcon';
 import { SettingsIcon } from './icons/SettingsIcon';
 import { isToday, isThisWeek } from '../utils/dateUtils';
-import { mockChannels } from '../services/videoService';
 
 interface FollowingPageProps {
   allVideos: Video[];
   onSelectVideo: (video: Video) => void;
+  followedChannels: FollowedChannel[];
 }
 
 const ViewModeButton: React.FC<{
@@ -33,12 +33,12 @@ const ViewModeButton: React.FC<{
 );
 
 
-export const FollowingPage: React.FC<FollowingPageProps> = ({ allVideos, onSelectVideo }) => {
+export const FollowingPage: React.FC<FollowingPageProps> = ({ allVideos, onSelectVideo, followedChannels }) => {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedChannel, setSelectedChannel] = useState<string>('All');
     const [isLoading, setIsLoading] = useState(true);
 
-    const followedChannelNames = useMemo(() => mockChannels.map(c => c.name), []);
+    const followedChannelNames = useMemo(() => followedChannels.map(c => c.name), [followedChannels]);
     
     const videos = useMemo(() => {
         return allVideos
@@ -110,7 +110,7 @@ export const FollowingPage: React.FC<FollowingPageProps> = ({ allVideos, onSelec
                            </div>
                            <span className={`text-xs text-center truncate w-full ${selectedChannel === 'All' ? 'font-bold text-slate-900' : 'font-medium text-slate-800'}`}>All</span>
                         </button>
-                        {mockChannels.map(channel => (
+                        {followedChannels.map(channel => (
                             <FollowedChannelItem 
                                 key={channel.name}
                                 channel={channel}
@@ -168,8 +168,17 @@ export const FollowingPage: React.FC<FollowingPageProps> = ({ allVideos, onSelec
                         })}
                          {videos.length === 0 && !isLoading && (
                             <div className="text-center py-16 px-4">
-                                <h2 className="text-2xl font-bold text-slate-800">No new videos</h2>
-                                <p className="text-slate-500 mt-2">Your followed channels haven't posted anything new recently.</p>
+                                {followedChannels.length > 0 ? (
+                                    <>
+                                        <h2 className="text-2xl font-bold text-slate-800">No new videos</h2>
+                                        <p className="text-slate-500 mt-2">Your followed channels haven't posted anything new recently.</p>
+                                    </>
+                                ) : (
+                                     <>
+                                        <h2 className="text-2xl font-bold text-slate-800">You're not following any channels</h2>
+                                        <p className="text-slate-500 mt-2">Follow some channels to see their latest videos here.</p>
+                                    </>
+                                )}
                             </div>
                          )}
                     </div>

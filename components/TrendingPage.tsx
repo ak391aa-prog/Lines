@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Video } from '../types';
-import { videoService } from '../services/videoService';
+import { backendService } from '../services/backendService';
 import { FireIcon } from './icons/FireIcon';
 import { MusicNoteIcon } from './icons/MusicNoteIcon';
 import { GamingIcon } from './icons/GamingIcon';
 import { FilmIcon } from './icons/FilmIcon';
 import { TrendingVideoCard } from './TrendingVideoCard';
-import { SpinnerIcon } from './icons/SpinnerIcon';
 
 interface TrendingPageProps {
   onSelectVideo: (video: Video) => void;
@@ -38,6 +37,32 @@ const CategoryButton: React.FC<{
   </button>
 );
 
+// --- NEW SKELETON COMPONENT ---
+const Shimmer: React.FC = () => <div className="absolute inset-0 animate-shimmer"></div>;
+
+const TrendingVideoCardSkeleton: React.FC = () => {
+  return (
+    <div className="flex gap-4 w-full p-2">
+        <div className="flex items-center justify-center w-12 flex-shrink-0">
+            <div className="relative overflow-hidden w-8 h-8 bg-slate-200 rounded-md"><Shimmer /></div>
+        </div>
+        <div className="relative overflow-hidden sm:w-64 md:w-80 flex-shrink-0 bg-slate-200 rounded-lg aspect-video">
+            <Shimmer />
+        </div>
+        <div className="flex flex-col flex-grow pt-1 space-y-3">
+            <div className="relative overflow-hidden w-3/4 h-5 bg-slate-200 rounded"><Shimmer /></div>
+            <div className="relative overflow-hidden w-1/2 h-4 bg-slate-200 rounded"><Shimmer /></div>
+            <div className="relative overflow-hidden w-1/3 h-4 bg-slate-200 rounded"><Shimmer /></div>
+            <div className="hidden md:block space-y-2 pt-2">
+                <div className="relative overflow-hidden w-full h-3 bg-slate-200 rounded"><Shimmer /></div>
+                <div className="relative overflow-hidden w-5/6 h-3 bg-slate-200 rounded"><Shimmer /></div>
+            </div>
+        </div>
+    </div>
+  );
+};
+
+
 export const TrendingPage: React.FC<TrendingPageProps> = ({ onSelectVideo }) => {
     const [activeCategory, setActiveCategory] = useState<TrendingCategory>('Now');
     const [location, setLocation] = useState<'Regional' | 'Global'>('Regional');
@@ -56,7 +81,10 @@ export const TrendingPage: React.FC<TrendingPageProps> = ({ onSelectVideo }) => 
             };
             const apiCategory = categoryMap[activeCategory] || 'Trending';
 
-            const { videos } = await videoService.getVideos({
+            // Simulate a slightly longer network request to make skeleton more visible
+            await new Promise(res => setTimeout(res, 300));
+
+            const { videos } = await backendService.getVideos({
                 category: apiCategory,
                 limit: 20,
                 location: location,
@@ -107,8 +135,10 @@ export const TrendingPage: React.FC<TrendingPageProps> = ({ onSelectVideo }) => 
             
             <main>
                 {isLoading ? (
-                    <div className="flex justify-center items-center p-10">
-                        <SpinnerIcon className="w-10 h-10 text-amber-500 animate-spin" />
+                    <div className="space-y-4">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                            <TrendingVideoCardSkeleton key={index} />
+                        ))}
                     </div>
                 ) : (
                     <div className="space-y-4">

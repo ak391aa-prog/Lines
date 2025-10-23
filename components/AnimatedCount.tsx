@@ -1,11 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-
-const formatCount = (count: number): string => {
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-    if (count >= 10000) return `${(count / 1000).toFixed(0)}K`;
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-    return count.toLocaleString();
-};
+import { formatCompactNumber } from '../utils/numberUtils';
 
 const easeOutQuint = (t: number): number => 1 - Math.pow(1 - t, 5);
 
@@ -57,5 +51,5 @@ export const AnimatedCount: React.FC<AnimatedCountProps> = ({ count }) => {
         };
     }, [count]);
 
-    return <span>{formatCount(displayCount)}</span>;
+    return <span>{formatCompactNumber(displayCount)}</span>;
 };
